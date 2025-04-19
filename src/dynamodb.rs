@@ -1,3 +1,4 @@
+use crate::localstack::spin_up_localstack_with_services;
 use aws_config::BehaviorVersion;
 use aws_sdk_dynamodb::config::Credentials;
 use aws_sdk_dynamodb::types::ScalarAttributeType::S;
@@ -10,17 +11,41 @@ use item_core::item_model::ItemModel;
 use serde_dynamo::aws_sdk_dynamodb_1::to_item;
 use std::collections::HashMap;
 use std::fs;
+use testcontainers::ContainerAsync;
+use testcontainers_modules::localstack::LocalStack;
+use tokio::sync::OnceCell;
 
-/// Returns the default client setup for testing on `http://localhost:4566`.
-pub async fn get_client() -> Client {
-    Client::new(
-        &aws_config::defaults(BehaviorVersion::latest())
-            .credentials_provider(Credentials::for_tests())
-            .region("eu-central-1")
-            .endpoint_url("http://localhost:4566")
-            .load()
-            .await,
-    )
+static CLIENT: OnceCell<Client> = OnceCell::const_new();
+
+/// Lazily initializes and returns a shared DynamoDB client.
+pub async fn get_client() -> &'static Client {
+    CLIENT
+        .get_or_init(|| async {
+            let config = aws_config::defaults(BehaviorVersion::latest())
+                .credentials_provider(Credentials::for_tests())
+                .region("eu-central-1")
+                .endpoint_url("http://localhost:4566")
+                .load()
+                .await;
+
+            Client::new(&config)
+        })
+        .await
+}
+
+static LOCALSTACK_DYNAMODB: OnceCell<ContainerAsync<LocalStack>> = OnceCell::const_new();
+
+/// Lazily initializes and returns a shared Localstack container running DynamoDB.
+/// 
+/// This also [`sets up`](setup) the data.
+pub async fn get_localstack_dynamodb() -> &'static ContainerAsync<LocalStack> {
+    LOCALSTACK_DYNAMODB
+        .get_or_init(|| async {
+            let container = spin_up_localstack_with_services(&["dynamodb"]).await;
+            setup(get_client().await).await;
+            container
+        })
+        .await
 }
 
 /// Sets up all tables and populates them with test data.
