@@ -2391,7 +2391,6 @@ dependencies = [
  "aws-config",
  "aws-sdk-dynamodb",
  "item-core",
- "once_cell",
  "serde_dynamo",
  "serde_json",
  "serial_test",
