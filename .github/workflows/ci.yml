@@ -39,5 +39,28 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-target-
 
+      - name: Cache Docker image
+        id: cache-localstack
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.docker-cache
+          key: ${{ runner.os }}-localstack-docker-${{ hashFiles('.github/workflows/ci.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-localstack-docker-
+
+      - name: Load cached Docker image
+        run: |
+          if [ -f /tmp/.docker-cache/localstack.tar ]; then
+            docker load -i /tmp/.docker-cache/localstack.tar
+          fi
+
+      - name: Pull LocalStack image (if not cached)
+        run: docker pull localstack/localstack:latest
+
+      - name: Save Docker image to cache
+        run: |
+          mkdir -p /tmp/.docker-cache
+          docker save localstack/localstack:latest -o /tmp/.docker-cache/localstack.tar
+
       - name: Run tests
         run: cargo test --all
