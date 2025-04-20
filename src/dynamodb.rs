@@ -10,7 +10,6 @@ use aws_sdk_dynamodb::{Client, Error};
 use item_core::item_model::ItemModel;
 use serde_dynamo::aws_sdk_dynamodb_1::to_item;
 use std::collections::HashMap;
-use std::fs;
 use testcontainers::ContainerAsync;
 use testcontainers_modules::localstack::LocalStack;
 use tokio::sync::OnceCell;
@@ -36,21 +35,15 @@ pub async fn get_client() -> &'static Client {
 static LOCALSTACK_DYNAMODB: OnceCell<ContainerAsync<LocalStack>> = OnceCell::const_new();
 
 /// Lazily initializes and returns a shared Localstack container running DynamoDB.
-/// 
-/// This also [`sets up`](setup) the data.
 pub async fn get_localstack_dynamodb() -> &'static ContainerAsync<LocalStack> {
     LOCALSTACK_DYNAMODB
-        .get_or_init(|| async {
-            let container = spin_up_localstack_with_services(&["dynamodb"]).await;
-            setup(get_client().await).await;
-            container
-        })
+        .get_or_init(|| async { spin_up_localstack_with_services(&["dynamodb"]).await })
         .await
 }
 
 /// Sets up all tables and populates them with test data.
 ///
-/// The test data resides in `src/data/`.
+/// The test data resides in `../data/`.
 pub async fn setup(client: &Client) {
     set_up_tables(client).await.ok();
     populate_tables(client).await.ok();
@@ -205,15 +198,10 @@ async fn populate_tables(client: &Client) -> Result<(), Error> {
     populate_items(client).await
 }
 
+const ITEMS_DATA: &str = include_str!("../data/items.json");
+
 async fn populate_items(client: &Client) -> Result<(), Error> {
-    let all_items: Vec<ItemModel> = serde_json::from_str(
-        fs::read_to_string("src/data/items.json")
-            .ok()
-            .unwrap()
-            .as_str(),
-    )
-    .ok()
-    .unwrap();
+    let all_items: Vec<ItemModel> = serde_json::from_str(ITEMS_DATA).ok().unwrap();
 
     for items in all_items.chunks(25) {
         let reqs = items
@@ -238,7 +226,7 @@ async fn populate_items(client: &Client) -> Result<(), Error> {
 ///
 /// Deletes all entries from all tables and repopulates with test data.
 ///
-/// The test data resides in `src/data/`.
+/// The test data resides in `../data/`.
 pub async fn reset(client: &Client) {
     depopulate_tables(client).await.ok();
     populate_tables(client).await.ok();
