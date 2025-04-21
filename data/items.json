@@ -13,6 +13,23 @@
     "hash": "b3645927df0c1e80484cda90192467a50b05e5a74777f1724b3dfc47e5ae3cc3"
   },
   {
+    "pk": "item#https://a1militaria.com#50109",
+    "sk": "item#2025-04-19T21:28:44.798902994Z",
+    "party_id": "source#https://a1militaria.com",
+    "event_id": "item#https://a1militaria.com#50109#2025-04-19T21:28:44.798902994Z",
+    "price": 160.0,
+    "hash": "aebef34f2900811878bc9660b60dac8ad6976db572fd4a44021480f65299475f"
+  },
+  {
+    "pk": "item#https://a1militaria.com#50109",
+    "sk": "item#2025-04-20T21:28:44.798902994Z",
+    "party_id": "source#https://a1militaria.com",
+    "event_id": "item#https://a1militaria.com#50109#2025-04-20T21:28:44.798902994Z",
+    "state": "item#SOLD",
+    "hash": "3f4b6790c333fe109d802ff327f4e450fffd85977e4cb053cec841241e0a8c17"
+  },
+
+  {
     "pk": "item#https://a1militaria.com#50307",
     "sk": "item#2025-04-18T21:28:44.798960453Z",
     "party_id": "source#https://a1militaria.com",
@@ -24,6 +41,7 @@
     "image_url": "https://a1militaria.com/photos/50307.jpg",
     "hash": "e3d91ce0915227a606603ecc608a0665336e802dd6b4804376dc90fd9fa96be0"
   },
+
   {
     "pk": "item#https://a1militaria.com#50475",
     "sk": "item#2025-04-18T21:28:44.798971098Z",
@@ -36,6 +54,7 @@
     "image_url": "https://a1militaria.com/photos/50475.jpg",
     "hash": "e3d91ce0915227a606603ecc608a0665336e802dd6b4804376dc90fd9fa96be0"
   },
+
   {
     "pk": "item#https://a1militaria.com#50368",
     "sk": "item#2025-04-18T21:28:44.803833539Z",
@@ -48,6 +67,7 @@
     "image_url": "https://a1militaria.com/photos/50368.jpg",
     "hash": "ad0df6f3ee089efbeb3dee9957bc074f5f906bc8e4db26b5598e478fdbda61be"
   },
+
   {
     "pk": "item#https://a1militaria.com#50388",
     "sk": "item#2025-04-18T21:28:44.803674239Z",
@@ -60,7 +80,38 @@
     "image_url": "https://a1militaria.com/photos/50388.jpg",
     "hash": "cc0a42aac37c639c3caceb1739fd7fe10e6817f1172b539afdfcce519c85c4f7"
   },
-
+  {
+    "pk": "item#https://a1militaria.com#50388",
+    "sk": "item#2025-04-19T21:28:44.803674239Z",
+    "party_id": "source#https://a1militaria.com",
+    "event_id": "item#https://a1militaria.com#50388#2025-04-19T21:28:44.803674239Z",
+    "price": 42.0,
+    "hash": "581dd226c306b9ee8e65472858769e4c4b17e991eaaed8bbf5691cd18dc2a502"
+  },
+  {
+    "pk": "item#https://a1militaria.com#50388",
+    "sk": "item#2025-04-20T21:28:44.803674239Z",
+    "party_id": "source#https://a1militaria.com",
+    "event_id": "item#https://a1militaria.com#50388#2025-04-20T21:28:44.803674239Z",
+    "state": "item#AVAILABLE",
+    "hash": "1d10a63438fff3ccd4877c2195c0a377a6ee0c8caad97e652b1e69c68b45557b"
+  },
+  {
+    "pk": "item#https://a1militaria.com#50388",
+    "sk": "item#2025-04-21T21:28:44.803674239Z",
+    "party_id": "source#https://a1militaria.com",
+    "event_id": "item#https://a1militaria.com#50388#2025-04-21T21:28:44.803674239Z",
+    "price": 37.0,
+    "hash": "aadb5e419fa5844ee7e2b7ebc9ab992696865c14f077508b2180cf371aab3f43"
+  },
+  {
+    "pk": "item#https://a1militaria.com#50388",
+    "sk": "item#2025-04-22T21:28:44.803674239Z",
+    "party_id": "source#https://a1militaria.com",
+    "event_id": "item#https://a1militaria.com#50388#2025-04-22T21:28:44.803674239Z",
+    "state": "item#RESERVED",
+    "hash": "03ca94cc5fa51f006000cb5446c8f7cca398cd65af2d8cbe2c2e151c64d6b26b"
+  },
 
 
 
@@ -77,6 +128,7 @@
     "image_url": "https://aandcmilitaria.com/photos/54.jpg",
     "hash": "193d8efbb4898b37b3abb30b3a78fbbedaefd14be7adc49c1235eeb94279e899"
   },
+
   {
     "pk": "item#https://aandcmilitaria.com#52",
     "sk": "item#2025-04-18T21:23:17.991670296Z",
@@ -90,6 +142,7 @@
     "image_url": "https://aandcmilitaria.com/photos/52.jpg",
     "hash": "ea912d68fd390379a970e0b7cabd9441202352bb66fd741d9a8555cdee6d8fba"
   },
+
   {
     "pk": "item#https://aandcmilitaria.com#51",
     "sk": "item#2025-04-18T21:23:17.991686517Z",
@@ -103,6 +156,7 @@
     "image_url": "https://aandcmilitaria.com/photos/51.jpg",
     "hash": "0afe56f212ad58382a1427e05a645257c1741be2cffd147236c40521cbd60662"
   },
+
   {
     "pk": "item#https://aandcmilitaria.com#12",
     "sk": "item#2025-04-18T21:23:17.992186115Z",
@@ -115,6 +169,7 @@
     "image_url": "https://aandcmilitaria.com/photos/12.jpg",
     "hash": "e3d91ce0915227a606603ecc608a0665336e802dd6b4804376dc90fd9fa96be0"
   },
+
   {
     "pk": "item#https://aandcmilitaria.com#11",
     "sk": "item#2025-04-18T21:23:17.992201948Z",
@@ -143,6 +198,7 @@
     "image_url": "https://gkmilitaria.at/photos/1777.jpg",
     "hash": "1f0231a02dd01a2f0e4a00e3c6302ef64538df27331e89d53886fc0705b56ddc"
   },
+
   {
     "pk": "item#https://gkmilitaria.at#1776",
     "sk": "item#2025-04-18T21:24:50.189127636Z",
@@ -155,6 +211,7 @@
     "image_url": "https://gkmilitaria.at/photos/1776.jpg",
     "hash": "ad0df6f3ee089efbeb3dee9957bc074f5f906bc8e4db26b5598e478fdbda61be"
   },
+
   {
     "pk": "item#https://gkmilitaria.at#1775",
     "sk": "item#2025-04-18T21:24:50.189161493Z",
@@ -168,6 +225,7 @@
     "image_url": "https://gkmilitaria.at/photos/1775.jpg",
     "hash": "605fa803f05666e3b59909065b27a85661d55f9753652d5c514e8092b143ff2d"
   },
+
   {
     "pk": "item#https://gkmilitaria.at#1770",
     "sk": "item#2025-04-18T21:24:50.189270588Z",
@@ -196,6 +254,7 @@
     "image_url": "https://gorsewayantiques.com/photos/20103.jpg",
     "hash": "516853673299b7f966f1c45440050dffd39a47e9483d0df98e6494a2621dce65"
   },
+
   {
     "pk": "item#https://gorsewayantiques.com#20140",
     "sk": "item#2025-04-18T21:29:49.681234913Z",
@@ -208,6 +267,7 @@
     "image_url": "https://gorsewayantiques.com/photos/20140.jpg",
     "hash": "e3d91ce0915227a606603ecc608a0665336e802dd6b4804376dc90fd9fa96be0"
   },
+
   {
     "pk": "item#https://gorsewayantiques.com#20139",
     "sk": "item#2025-04-18T21:29:49.681240395Z",
@@ -235,6 +295,7 @@
     "image_url": "https://liverpoolmilitaria.com/photos/50946.jpg",
     "hash": "e3d91ce0915227a606603ecc608a0665336e802dd6b4804376dc90fd9fa96be0"
   },
+
   {
     "pk": "item#https://liverpoolmilitaria.com#50879",
     "sk": "item#2025-04-18T21:21:12.206016585Z",

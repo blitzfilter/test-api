@@ -37,7 +37,7 @@ async fn should_set_up_tables_for_setup() {
 #[blitzfilter_dynamodb_test]
 async fn should_insert_test_items_for_setup() {
     let scan_output = get_client().await.scan().table_name("items").send().await.ok().unwrap();
-    assert_eq!(scan_output.count, 19);
+    assert_eq!(scan_output.count, 25);
 }
 
 #[blitzfilter_dynamodb_test]
@@ -55,10 +55,10 @@ async fn should_reset_test_items_for_reset() {
         .ok();
 
     let scan_output_pre_reset = client.scan().table_name("items").send().await.ok().unwrap();
-    assert_eq!(scan_output_pre_reset.count, 20);
+    assert_eq!(scan_output_pre_reset.count, 26);
 
     test_api::dynamodb::reset(client).await;
 
     let scan_output_post_reset = client.scan().table_name("items").send().await.ok().unwrap();
-    assert_eq!(scan_output_post_reset.count, 19);
+    assert_eq!(scan_output_post_reset.count, 25);
 }

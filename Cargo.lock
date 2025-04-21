@@ -1499,11 +1499,10 @@ dependencies = [
 [[package]]
 name = "item-core"
 version = "0.1.0"
-source = "git+https://github.com/blitzfilter/item-core?branch=main#a93e4157128cf00ea37402502e7b956977c9c223"
+source = "git+https://github.com/blitzfilter/item-core?branch=main#3ded9e57bcc1b62ed083fbfc52df35dbe91b223d"
 dependencies = [
  "blake3",
  "serde",
- "serde_json",
  "strum",
  "strum_macros",
  "time",
