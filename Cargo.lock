@@ -1499,7 +1499,7 @@ dependencies = [
 [[package]]
 name = "item-core"
 version = "0.1.0"
-source = "git+https://github.com/blitzfilter/item-core?branch=main#3ded9e57bcc1b62ed083fbfc52df35dbe91b223d"
+source = "git+https://github.com/blitzfilter/item-core?branch=main#46fc8ccfc8491236e209c743a388260321236390"
 dependencies = [
  "blake3",
  "serde",
