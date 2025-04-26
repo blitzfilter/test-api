@@ -1,6 +1,6 @@
 use aws_sdk_dynamodb::types::AttributeValue::S;
 use std::collections::HashMap;
-use test_api::dynamodb::{get_client, get_localstack_dynamodb};
+use test_api::dynamodb::{get_dynamodb_client, get_localstack_dynamodb};
 use test_api_macros::blitzfilter_dynamodb_test;
 
 #[blitzfilter_dynamodb_test]
@@ -14,7 +14,7 @@ async fn should_expose_test_host_and_port(container: &ContainerAsync<LocalStack>
 
 #[blitzfilter_dynamodb_test]
 async fn should_spin_up_localstack() {
-    match get_client().await.list_tables().send().await {
+    match get_dynamodb_client().await.list_tables().send().await {
         Ok(_) => {}
         Err(e) => {
             eprintln!("{:?}", e);
@@ -25,7 +25,7 @@ async fn should_spin_up_localstack() {
 
 #[blitzfilter_dynamodb_test]
 async fn should_set_up_tables_for_setup() {
-    let list_tables_output = get_client().await.list_tables().send().await.ok().unwrap();
+    let list_tables_output = get_dynamodb_client().await.list_tables().send().await.ok().unwrap();
     let tables = list_tables_output.table_names();
 
     assert_eq!(tables.len(), 3);
@@ -36,13 +36,13 @@ async fn should_set_up_tables_for_setup() {
 
 #[blitzfilter_dynamodb_test]
 async fn should_insert_test_items_for_setup() {
-    let scan_output = get_client().await.scan().table_name("items").send().await.ok().unwrap();
+    let scan_output = get_dynamodb_client().await.scan().table_name("items").send().await.ok().unwrap();
     assert_eq!(scan_output.count, 25);
 }
 
 #[blitzfilter_dynamodb_test]
 async fn should_reset_test_items_for_reset() {
-    let client = get_client().await;
+    let client = get_dynamodb_client().await;
     client
         .put_item()
         .table_name("items")

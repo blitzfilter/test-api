@@ -1,6 +1,4 @@
-use crate::localstack::spin_up_localstack_with_services;
-use aws_config::BehaviorVersion;
-use aws_sdk_dynamodb::config::Credentials;
+use crate::localstack::{get_aws_config, spin_up_localstack_with_services};
 use aws_sdk_dynamodb::types::ScalarAttributeType::S;
 use aws_sdk_dynamodb::types::{
     AttributeDefinition, AttributeValue, BillingMode, DeleteRequest, GlobalSecondaryIndex,
@@ -17,18 +15,9 @@ use tokio::sync::OnceCell;
 static CLIENT: OnceCell<Client> = OnceCell::const_new();
 
 /// Lazily initializes and returns a shared DynamoDB client.
-pub async fn get_client() -> &'static Client {
+pub async fn get_dynamodb_client() -> &'static Client {
     CLIENT
-        .get_or_init(|| async {
-            let config = aws_config::defaults(BehaviorVersion::latest())
-                .credentials_provider(Credentials::for_tests())
-                .region("eu-central-1")
-                .endpoint_url("http://localhost:4566")
-                .load()
-                .await;
-
-            Client::new(&config)
-        })
+        .get_or_init(|| async { Client::new(get_aws_config().await) })
         .await
 }
 
@@ -45,8 +34,24 @@ pub async fn get_localstack_dynamodb() -> &'static ContainerAsync<LocalStack> {
 ///
 /// The test data resides in `../data/`.
 pub async fn setup(client: &Client) {
-    set_up_tables(client).await.ok();
-    populate_tables(client).await.ok();
+    tear_down_tables(client)
+        .await
+        .expect("shouldn't fail tearing down existing tables");
+    set_up_tables(client)
+        .await
+        .expect("shouldn't fail setting up tables");
+    populate_tables(client)
+        .await
+        .expect("shouldn't fail populating tables");
+}
+
+async fn tear_down_tables(client: &Client) -> Result<(), Error> {
+    let tables = client.list_tables().send().await?;
+    for table in tables.table_names.unwrap_or_default() {
+        client.delete_table().table_name(table).send().await?;
+    }
+
+    Ok(())
 }
 
 async fn set_up_tables(client: &Client) -> Result<(), Error> {
@@ -201,14 +206,23 @@ async fn populate_tables(client: &Client) -> Result<(), Error> {
 const ITEMS_DATA: &str = include_str!("../data/items.json");
 
 async fn populate_items(client: &Client) -> Result<(), Error> {
-    let all_items: Vec<ItemModel> = serde_json::from_str(ITEMS_DATA).ok().unwrap();
+    let all_items: Vec<ItemModel> =
+        serde_json::from_str(ITEMS_DATA).expect("shouldn't fail deserializing 'ITEM_DATA'");
 
     for items in all_items.chunks(25) {
         let reqs = items
             .iter()
-            .map(|item_diff| to_item(item_diff).ok())
-            .map(|payload| PutRequest::builder().set_item(payload).build().ok())
-            .map(|req| WriteRequest::builder().set_put_request(req).build())
+            .map(|item_diff| {
+                to_item(item_diff)
+                    .expect("shouldn't fail converting 'ItemModel' to DynamoDB-Attribute-Values")
+            })
+            .map(|payload| {
+                PutRequest::builder()
+                    .set_item(Some(payload))
+                    .build()
+                    .expect("shouldn't fail building a put request because 'item' has been set")
+            })
+            .map(|req| WriteRequest::builder().set_put_request(Some(req)).build())
             .collect();
 
         client
@@ -216,7 +230,7 @@ async fn populate_items(client: &Client) -> Result<(), Error> {
             .request_items("items", reqs)
             .send()
             .await
-            .ok();
+            .expect("shouldn't fail writing items");
     }
 
     Ok(())
@@ -228,8 +242,12 @@ async fn populate_items(client: &Client) -> Result<(), Error> {
 ///
 /// The test data resides in `../data/`.
 pub async fn reset(client: &Client) {
-    depopulate_tables(client).await.ok();
-    populate_tables(client).await.ok();
+    depopulate_tables(client)
+        .await
+        .expect("shouldn't fail depopulating tables");
+    populate_tables(client)
+        .await
+        .expect("shouldn't fail populating tables");
 }
 
 async fn depopulate_tables(client: &Client) -> Result<(), Error> {
@@ -258,8 +276,7 @@ async fn depopulate_tables(client: &Client) -> Result<(), Error> {
                                     DeleteRequest::builder()
                                         .set_key(Some(key))
                                         .build()
-                                        .ok()
-                                        .unwrap(),
+                                        .expect("shouldn't fail building a delete request because 'key' has been set"),
                                 )
                                 .build()
                         })
