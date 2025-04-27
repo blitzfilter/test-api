@@ -40,8 +40,9 @@ pub fn blitzfilter_data_ingestion_test(_attr: TokenStream, item: TokenStream) ->
             let container = test_api::sqs_lambda_dynamodb::get_localstack_sqs_lambda_dynamodb().await;
             let dynamodb_client = test_api::dynamodb::get_dynamodb_client().await;
             let sqs_client = test_api::sqs_lambda_dynamodb::get_sqs_client().await;
+            let lambda_client = test_api::sqs_lambda_dynamodb::get_lambda_client().await;
 
-            test_api::sqs_lambda_dynamodb::setup(sqs_client, dynamodb_client).await;
+            test_api::sqs_lambda_dynamodb::setup(sqs_client, lambda_client, dynamodb_client).await;
 
             let test_fn = async #fn_block;
             test_fn.await;

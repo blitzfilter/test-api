@@ -1,6 +1,9 @@
 use crate::localstack::{get_aws_config, spin_up_localstack_with_services};
+use aws_sdk_dynamodb::config::http::HttpResponse;
+use aws_sdk_lambda::operation::delete_function::{DeleteFunctionError, DeleteFunctionOutput};
 use aws_sdk_lambda::types::Runtime;
 use aws_sdk_sqs::types::QueueAttributeName::QueueArn;
+use futures::future::try_join_all;
 use std::fs::File;
 use std::io::Read;
 use std::process::Command;
@@ -49,7 +52,7 @@ pub async fn get_localstack_sqs_lambda_dynamodb() -> &'static ContainerAsync<Loc
 pub const LAMBDA_NAME: &str = "item_write_lambda";
 const LAMBDA_BOOTSRAP_ZIP_PATH: &str = "/tmp/item_write_lambda_bootstrap.zip";
 
-async fn upload_lambda() {
+async fn set_up_lambda(client: &aws_sdk_lambda::Client) -> Result<(), Box<dyn std::error::Error>> {
     Command::new("wget")
         .args([
             "--no-check-certificate",
@@ -62,7 +65,6 @@ async fn upload_lambda() {
             "shouldn't fail downloading bootstrap-zip for '{LAMBDA_NAME}'"
         ));
 
-    // Read the Lambda function's zip file into memory
     let mut file = File::open(LAMBDA_BOOTSRAP_ZIP_PATH).expect(&format!(
         "shouldn't fail opening '{LAMBDA_BOOTSRAP_ZIP_PATH}'"
     ));
@@ -71,7 +73,6 @@ async fn upload_lambda() {
         "shouldn't fail reading '{LAMBDA_BOOTSRAP_ZIP_PATH}'"
     ));
 
-    let client = aws_sdk_lambda::Client::new(get_aws_config().await);
     client
         .create_function()
         .function_name(LAMBDA_NAME)
@@ -86,11 +87,15 @@ async fn upload_lambda() {
         .send()
         .await
         .expect("shouldn't fail creating lambda");
+
+    Ok(())
 }
 
-async fn configure_lambda_with_sqs() {
-    let q_arn = get_sqs_client()
-        .await
+async fn setup_sqs_lambda_config(
+    sqs_client: &aws_sdk_sqs::Client,
+    lambda_client: &aws_sdk_lambda::Client,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let q_arn = sqs_client
         .get_queue_attributes()
         .queue_url(QUEUE_URL)
         .attribute_names(QueueArn)
@@ -107,8 +112,7 @@ async fn configure_lambda_with_sqs() {
         ))
         .to_string();
 
-    get_lambda_client()
-        .await
+    lambda_client
         .create_event_source_mapping()
         .event_source_arn(q_arn)
         .function_name(LAMBDA_NAME)
@@ -117,22 +121,35 @@ async fn configure_lambda_with_sqs() {
         .send()
         .await
         .expect("shouldn't fail creating event source mapping");
+
+    Ok(())
 }
 
 pub const QUEUE_NAME: &str = "write_lambda_queue";
 pub const QUEUE_URL: &str =
     "http://sqs.eu-central-1.localhost.localstack.cloud:4566/000000000000/write_lambda_queue";
 
-pub async fn setup(sqs_client: &aws_sdk_sqs::Client, dynamodb_client: &aws_sdk_dynamodb::Client) {
+pub async fn setup(
+    sqs_client: &aws_sdk_sqs::Client,
+    lambda_client: &aws_sdk_lambda::Client,
+    dynamodb_client: &aws_sdk_dynamodb::Client,
+) {
     crate::dynamodb::setup(dynamodb_client).await;
     tear_down_queues(sqs_client)
         .await
         .expect("shouldn't fail tearing down existing queues");
+    tear_down_lambdas(lambda_client)
+        .await
+        .expect("shouldn't fail tearing down existing lambdas");
     set_up_queues(sqs_client)
         .await
         .expect(&format!("shouldn't fail creating queue '{QUEUE_NAME}'"));
-    upload_lambda().await;
-    configure_lambda_with_sqs().await;
+    set_up_lambda(lambda_client)
+        .await
+        .expect(&format!("shouldn't fail setting up lambda '{LAMBDA_NAME}'"));
+    setup_sqs_lambda_config(sqs_client, lambda_client)
+        .await
+        .expect("shouldn't fail setting up sqs lambda config");
 }
 
 async fn tear_down_queues(sqs_client: &aws_sdk_sqs::Client) -> Result<(), aws_sdk_sqs::Error> {
@@ -141,6 +158,31 @@ async fn tear_down_queues(sqs_client: &aws_sdk_sqs::Client) -> Result<(), aws_sd
         sqs_client.delete_queue().queue_url(&q).send().await?;
     }
     Ok(())
+}
+
+async fn tear_down_lambdas(
+    lambda_client: &aws_sdk_lambda::Client,
+) -> Result<
+    Vec<DeleteFunctionOutput>,
+    aws_sdk_lambda::error::SdkError<DeleteFunctionError, HttpResponse>,
+> {
+    let delete_lambda_reqs = lambda_client
+        .list_functions()
+        .send()
+        .await
+        .expect("shouldn't fail getting lambdas")
+        .functions()
+        .into_iter()
+        .filter_map(|lambda| lambda.function_name.clone())
+        .map(|lambda_name| {
+            lambda_client
+                .delete_function()
+                .function_name(lambda_name.rsplit_once(':').unwrap().1)
+                .send()
+        })
+        .collect::<Vec<_>>();
+
+    try_join_all(delete_lambda_reqs).await
 }
 
 async fn set_up_queues(sqs_client: &aws_sdk_sqs::Client) -> Result<(), aws_sdk_sqs::Error> {
@@ -152,7 +194,10 @@ async fn set_up_queues(sqs_client: &aws_sdk_sqs::Client) -> Result<(), aws_sdk_s
     Ok(())
 }
 
-pub async fn reset(sqs_client: &aws_sdk_sqs::Client, dynamodb_client: &aws_sdk_dynamodb::Client) {
+pub async fn reset(
+    sqs_client: &aws_sdk_sqs::Client,
+    dynamodb_client: &aws_sdk_dynamodb::Client,
+) {
     crate::dynamodb::reset(dynamodb_client).await;
     sqs_client
         .purge_queue()
