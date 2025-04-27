@@ -1,6 +1,9 @@
-use aws_sdk_lambda::Client;
-use test_api::localstack::get_aws_config;
-use test_api::sqs_lambda_dynamodb::{QUEUE_URL, get_sqs_client, LAMBDA_NAME};
+use std::time::Duration;
+use item_core::item_data::ItemData;
+use item_core::item_model::ItemModel;
+use tokio::time::sleep;
+use test_api::generator::Generator;
+use test_api::sqs_lambda_dynamodb::{LAMBDA_NAME, QUEUE_URL, get_lambda_client, get_sqs_client};
 use test_api_macros::blitzfilter_data_ingestion_test;
 
 #[blitzfilter_data_ingestion_test]
@@ -34,12 +37,40 @@ async fn should_send_sqs_message_and_consume_it() {
 
 #[blitzfilter_data_ingestion_test]
 async fn should_enable_lambda_service_and_upload_lambda() {
-    let client = Client::new(get_aws_config().await);
-    let list_functions_res = client.list_functions().send().await;
+    let list_functions_res = get_lambda_client().await.list_functions().send().await;
     assert!(list_functions_res.is_ok());
-    
+
     let list_functions_opt = list_functions_res.unwrap().functions;
     let list_functions = list_functions_opt.unwrap();
     assert_eq!(list_functions.len(), 1);
-    assert_eq!(list_functions[0].function_name, Some(LAMBDA_NAME.to_string()));
+    assert_eq!(
+        list_functions[0].function_name,
+        Some(LAMBDA_NAME.to_string())
+    );
+}
+
+#[blitzfilter_data_ingestion_test]
+async fn should_insert_msg_in_q_then_trigger_lambda() {
+    let item: ItemData = ItemModel::generate().into();
+    let sqs_client = get_sqs_client().await;
+    sqs_client
+        .send_message()
+        .queue_url(QUEUE_URL)
+        .message_body(serde_json::to_string(&item).unwrap())
+        .send()
+        .await
+        .expect("shouldn't fail sending message to queue");
+    
+    // Wait for lambda to poll event
+    sleep(Duration::from_secs(10)).await;
+
+    // Check if queue is empty - someone else (Lambda) polled the event we previously sent
+    let receive_res = sqs_client
+        .receive_message()
+        .queue_url(QUEUE_URL)
+        .send()
+        .await;
+    assert!(receive_res.is_ok());
+    let received_msgs_opt = receive_res.unwrap().messages;
+    assert!(received_msgs_opt.is_none());
 }
