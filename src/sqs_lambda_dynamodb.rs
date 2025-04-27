@@ -1,4 +1,9 @@
 use crate::localstack::{get_aws_config, spin_up_localstack_with_services};
+use aws_sdk_lambda::Client;
+use aws_sdk_lambda::types::Runtime;
+use std::fs::File;
+use std::io::Read;
+use std::process::Command;
 use testcontainers::ContainerAsync;
 use testcontainers_modules::localstack::LocalStack;
 use tokio::sync::OnceCell;
@@ -24,10 +29,51 @@ static LOCALSTACK_SQS_LAMBDA_DYNAMODB: OnceCell<ContainerAsync<LocalStack>> = On
 pub async fn get_localstack_sqs_lambda_dynamodb() -> &'static ContainerAsync<LocalStack> {
     LOCALSTACK_SQS_LAMBDA_DYNAMODB
         .get_or_init(|| async {
-            spin_up_localstack_with_services(&["sqs", "lambda", "dynamodb"]).await
-            // TODO: Upload lambda
+            let ls = spin_up_localstack_with_services(&["sqs", "lambda", "dynamodb"]).await;
+            upload_lambda().await;
+            ls
         })
         .await
+}
+
+pub const LAMBDA_NAME: &str = "item_write_lambda";
+const LAMBDA_BOOTSRAP_ZIP_PATH: &str = "/tmp/item_write_lambda_bootstrap.zip";
+
+async fn upload_lambda() {
+    Command::new("wget")
+        .args([
+            "--no-check-certificate", 
+            "https://raw.githubusercontent.com/blitzfilter/item-write-lambda/main/bootstrap.zip",
+            "-O",
+            LAMBDA_BOOTSRAP_ZIP_PATH
+        ])
+        .output()
+        .expect(&format!("shouldn't fail downloading bootstrap-zip for '{LAMBDA_NAME}'"));
+
+    // Read the Lambda function's zip file into memory
+    let mut file = File::open(LAMBDA_BOOTSRAP_ZIP_PATH).expect(&format!(
+        "shouldn't fail opening '{LAMBDA_BOOTSRAP_ZIP_PATH}'"
+    ));
+    let mut buffer = Vec::new();
+    file.read_to_end(&mut buffer).expect(&format!(
+        "shouldn't fail reading '{LAMBDA_BOOTSRAP_ZIP_PATH}'"
+    ));
+
+    let client = Client::new(get_aws_config().await);
+    client
+        .create_function()
+        .function_name(LAMBDA_NAME)
+        .runtime(Runtime::Providedal2023)
+        .handler("lib.function_handler")
+        .role("arn:aws:iam::000000000000:role/service-role/dummy")
+        .code(
+            aws_sdk_lambda::types::FunctionCode::builder()
+                .zip_file(buffer.into())
+                .build(),
+        )
+        .send()
+        .await
+        .expect("shouldn't fail creating lambda");
 }
 
 pub const QUEUE_NAME: &str = "write_lambda_queue";
