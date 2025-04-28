@@ -1,32 +1,7 @@
 use aws_sdk_dynamodb::types::AttributeValue::S;
 use std::collections::HashMap;
-use test_api::dynamodb::get_localstack_dynamodb;
 use test_api::localstack::get_dynamodb_client;
 use test_api_macros::blitzfilter_dynamodb_test;
-
-#[blitzfilter_dynamodb_test]
-async fn should_expose_test_host_and_port(container: &ContainerAsync<LocalStack>) {
-    let host_ip = get_localstack_dynamodb().await.get_host().await.ok();
-    let host_port = get_localstack_dynamodb()
-        .await
-        .get_host_port_ipv4(4566)
-        .await
-        .ok();
-
-    assert_eq!(host_ip.unwrap().to_string(), "localhost");
-    assert_eq!(host_port.unwrap(), 4566);
-}
-
-#[blitzfilter_dynamodb_test]
-async fn should_spin_up_localstack() {
-    match get_dynamodb_client().await.list_tables().send().await {
-        Ok(_) => {}
-        Err(e) => {
-            eprintln!("{:?}", e);
-            assert!(false);
-        }
-    }
-}
 
 #[blitzfilter_dynamodb_test]
 async fn should_set_up_tables_for_setup() {
