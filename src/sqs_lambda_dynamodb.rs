@@ -1,4 +1,4 @@
-use crate::localstack::{get_aws_config, spin_up_localstack_with_services};
+use crate::localstack::{get_lambda_client, get_sqs_client, spin_up_localstack_with_services};
 use aws_sdk_lambda::types::Runtime;
 use aws_sdk_sqs::types::QueueAttributeName::QueueArn;
 use std::fs::File;
@@ -7,30 +7,6 @@ use std::process::Command;
 use testcontainers::ContainerAsync;
 use testcontainers_modules::localstack::LocalStack;
 use tokio::sync::OnceCell;
-
-static SQS_CLIENT: OnceCell<aws_sdk_sqs::Client> = OnceCell::const_new();
-
-/// Lazily initializes and returns a shared SQS client.
-pub async fn get_sqs_client() -> &'static aws_sdk_sqs::Client {
-    SQS_CLIENT
-        .get_or_init(|| async {
-            let config = get_aws_config().await;
-            aws_sdk_sqs::Client::new(&config)
-        })
-        .await
-}
-
-static LAMBDA_CLIENT: OnceCell<aws_sdk_lambda::Client> = OnceCell::const_new();
-
-/// Lazily initializes and returns a shared Lambda client.
-pub async fn get_lambda_client() -> &'static aws_sdk_lambda::Client {
-    LAMBDA_CLIENT
-        .get_or_init(|| async {
-            let config = get_aws_config().await;
-            aws_sdk_lambda::Client::new(&config)
-        })
-        .await
-}
 
 static LOCALSTACK_SQS_LAMBDA_DYNAMODB: OnceCell<ContainerAsync<LocalStack>> = OnceCell::const_new();
 

@@ -1,4 +1,4 @@
-use crate::localstack::{get_aws_config, spin_up_localstack_with_services};
+use crate::localstack::{get_dynamodb_client, spin_up_localstack_with_services};
 use aws_sdk_dynamodb::types::ScalarAttributeType::S;
 use aws_sdk_dynamodb::types::{
     AttributeDefinition, AttributeValue, BillingMode, DeleteRequest, GlobalSecondaryIndex,
@@ -11,15 +11,6 @@ use std::collections::HashMap;
 use testcontainers::ContainerAsync;
 use testcontainers_modules::localstack::LocalStack;
 use tokio::sync::OnceCell;
-
-static CLIENT: OnceCell<Client> = OnceCell::const_new();
-
-/// Lazily initializes and returns a shared DynamoDB client.
-pub async fn get_dynamodb_client() -> &'static Client {
-    CLIENT
-        .get_or_init(|| async { Client::new(get_aws_config().await) })
-        .await
-}
 
 static LOCALSTACK_DYNAMODB: OnceCell<ContainerAsync<LocalStack>> = OnceCell::const_new();
 

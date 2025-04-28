@@ -1,10 +1,11 @@
-use std::time::Duration;
 use item_core::item_data::ItemData;
 use item_core::item_model::ItemModel;
-use tokio::time::sleep;
+use std::time::Duration;
 use test_api::generator::Generator;
-use test_api::sqs_lambda_dynamodb::{LAMBDA_NAME, QUEUE_URL, get_lambda_client, get_sqs_client};
+use test_api::localstack::{get_lambda_client, get_sqs_client};
+use test_api::sqs_lambda_dynamodb::{LAMBDA_NAME, QUEUE_URL};
 use test_api_macros::blitzfilter_data_ingestion_test;
+use tokio::time::sleep;
 
 #[blitzfilter_data_ingestion_test]
 async fn should_enable_lambda_service_and_upload_lambda() {
@@ -31,7 +32,7 @@ async fn should_insert_msg_in_q_then_trigger_lambda() {
         .send()
         .await
         .expect("shouldn't fail sending message to queue");
-    
+
     // Wait for lambda to poll event
     sleep(Duration::from_secs(10)).await;
 

@@ -1,4 +1,5 @@
 use aws_config::{BehaviorVersion, SdkConfig};
+use aws_sdk_dynamodb::Client;
 use aws_sdk_dynamodb::config::Credentials;
 use std::collections::HashMap;
 use std::process::Command;
@@ -36,8 +37,11 @@ pub async fn spin_up_localstack_with_services(services: &[&str]) -> ContainerAsy
     spin_up_localstack(HashMap::from([("SERVICES", services.join(",").as_str())])).await
 }
 
-static CONFIG: OnceCell<SdkConfig> = OnceCell::const_new();
+fn cleanup_existing_container(name: &str) {
+    let _ = Command::new("docker").args(["rm", "-f", name]).output();
+}
 
+static CONFIG: OnceCell<SdkConfig> = OnceCell::const_new();
 /// Lazily initializes and returns a shared AWS-Config.
 pub async fn get_aws_config() -> &'static SdkConfig {
     CONFIG
@@ -52,6 +56,32 @@ pub async fn get_aws_config() -> &'static SdkConfig {
         .await
 }
 
-fn cleanup_existing_container(name: &str) {
-    let _ = Command::new("docker").args(["rm", "-f", name]).output();
+static DYNAMODB_CLIENT: OnceCell<Client> = OnceCell::const_new();
+/// Lazily initializes and returns a shared DynamoDB client.
+pub async fn get_dynamodb_client() -> &'static Client {
+    DYNAMODB_CLIENT
+        .get_or_init(|| async { Client::new(get_aws_config().await) })
+        .await
+}
+
+static SQS_CLIENT: OnceCell<aws_sdk_sqs::Client> = OnceCell::const_new();
+/// Lazily initializes and returns a shared SQS client.
+pub async fn get_sqs_client() -> &'static aws_sdk_sqs::Client {
+    SQS_CLIENT
+        .get_or_init(|| async {
+            let config = get_aws_config().await;
+            aws_sdk_sqs::Client::new(&config)
+        })
+        .await
+}
+
+static LAMBDA_CLIENT: OnceCell<aws_sdk_lambda::Client> = OnceCell::const_new();
+/// Lazily initializes and returns a shared Lambda client.
+pub async fn get_lambda_client() -> &'static aws_sdk_lambda::Client {
+    LAMBDA_CLIENT
+        .get_or_init(|| async {
+            let config = get_aws_config().await;
+            aws_sdk_lambda::Client::new(&config)
+        })
+        .await
 }
