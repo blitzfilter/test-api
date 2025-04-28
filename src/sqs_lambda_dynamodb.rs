@@ -1,9 +1,6 @@
 use crate::localstack::{get_aws_config, spin_up_localstack_with_services};
-use aws_sdk_dynamodb::config::http::HttpResponse;
-use aws_sdk_lambda::operation::delete_function::{DeleteFunctionError, DeleteFunctionOutput};
 use aws_sdk_lambda::types::Runtime;
 use aws_sdk_sqs::types::QueueAttributeName::QueueArn;
-use futures::future::try_join_all;
 use std::fs::File;
 use std::io::Read;
 use std::process::Command;
@@ -44,7 +41,19 @@ static LOCALSTACK_SQS_LAMBDA_DYNAMODB: OnceCell<ContainerAsync<LocalStack>> = On
 pub async fn get_localstack_sqs_lambda_dynamodb() -> &'static ContainerAsync<LocalStack> {
     LOCALSTACK_SQS_LAMBDA_DYNAMODB
         .get_or_init(|| async {
-            spin_up_localstack_with_services(&["sqs", "lambda", "dynamodb"]).await
+            let ls = spin_up_localstack_with_services(&["sqs", "lambda", "dynamodb"]).await;
+            let lambda_client = get_lambda_client().await;
+            let sqs_client = get_sqs_client().await;
+            set_up_queues(sqs_client)
+                .await
+                .expect(&format!("shouldn't fail creating queue '{QUEUE_NAME}'"));
+            set_up_lambda(lambda_client)
+                .await
+                .expect(&format!("shouldn't fail setting up lambda '{LAMBDA_NAME}'"));
+            setup_sqs_lambda_config(sqs_client, lambda_client)
+                .await
+                .expect("shouldn't fail setting up sqs lambda config");
+            ls
         })
         .await
 }
@@ -129,60 +138,8 @@ pub const QUEUE_NAME: &str = "write_lambda_queue";
 pub const QUEUE_URL: &str =
     "http://sqs.eu-central-1.localhost.localstack.cloud:4566/000000000000/write_lambda_queue";
 
-pub async fn setup(
-    sqs_client: &aws_sdk_sqs::Client,
-    lambda_client: &aws_sdk_lambda::Client,
-    dynamodb_client: &aws_sdk_dynamodb::Client,
-) {
+pub async fn setup(dynamodb_client: &aws_sdk_dynamodb::Client) {
     crate::dynamodb::setup(dynamodb_client).await;
-    tear_down_queues(sqs_client)
-        .await
-        .expect("shouldn't fail tearing down existing queues");
-    tear_down_lambdas(lambda_client)
-        .await
-        .expect("shouldn't fail tearing down existing lambdas");
-    set_up_queues(sqs_client)
-        .await
-        .expect(&format!("shouldn't fail creating queue '{QUEUE_NAME}'"));
-    set_up_lambda(lambda_client)
-        .await
-        .expect(&format!("shouldn't fail setting up lambda '{LAMBDA_NAME}'"));
-    setup_sqs_lambda_config(sqs_client, lambda_client)
-        .await
-        .expect("shouldn't fail setting up sqs lambda config");
-}
-
-async fn tear_down_queues(sqs_client: &aws_sdk_sqs::Client) -> Result<(), aws_sdk_sqs::Error> {
-    let qs = sqs_client.list_queues().send().await?;
-    for q in qs.queue_urls.unwrap_or_default() {
-        sqs_client.delete_queue().queue_url(&q).send().await?;
-    }
-    Ok(())
-}
-
-async fn tear_down_lambdas(
-    lambda_client: &aws_sdk_lambda::Client,
-) -> Result<
-    Vec<DeleteFunctionOutput>,
-    aws_sdk_lambda::error::SdkError<DeleteFunctionError, HttpResponse>,
-> {
-    let delete_lambda_reqs = lambda_client
-        .list_functions()
-        .send()
-        .await
-        .expect("shouldn't fail getting lambdas")
-        .functions()
-        .into_iter()
-        .filter_map(|lambda| lambda.function_name.clone())
-        .map(|lambda_name| {
-            lambda_client
-                .delete_function()
-                .function_name(lambda_name.rsplit_once(':').unwrap().1)
-                .send()
-        })
-        .collect::<Vec<_>>();
-
-    try_join_all(delete_lambda_reqs).await
 }
 
 async fn set_up_queues(sqs_client: &aws_sdk_sqs::Client) -> Result<(), aws_sdk_sqs::Error> {
@@ -194,10 +151,7 @@ async fn set_up_queues(sqs_client: &aws_sdk_sqs::Client) -> Result<(), aws_sdk_s
     Ok(())
 }
 
-pub async fn reset(
-    sqs_client: &aws_sdk_sqs::Client,
-    dynamodb_client: &aws_sdk_dynamodb::Client,
-) {
+pub async fn reset(sqs_client: &aws_sdk_sqs::Client, dynamodb_client: &aws_sdk_dynamodb::Client) {
     crate::dynamodb::reset(dynamodb_client).await;
     sqs_client
         .purge_queue()
