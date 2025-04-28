@@ -41,7 +41,7 @@ async fn should_insert_test_items_for_setup() {
 }
 
 #[blitzfilter_dynamodb_test]
-async fn should_reset_test_items_for_reset() {
+async fn should_drop_test_items_for_reset() {
     let client = get_dynamodb_client().await;
     client
         .put_item()
@@ -60,5 +60,5 @@ async fn should_reset_test_items_for_reset() {
     test_api::dynamodb::reset(client).await;
 
     let scan_output_post_reset = client.scan().table_name("items").send().await.ok().unwrap();
-    assert_eq!(scan_output_post_reset.count, 25);
+    assert_eq!(scan_output_post_reset.count, 0);
 }

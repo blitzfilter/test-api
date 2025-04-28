@@ -26,32 +26,27 @@ static LOCALSTACK_DYNAMODB: OnceCell<ContainerAsync<LocalStack>> = OnceCell::con
 /// Lazily initializes and returns a shared Localstack container running DynamoDB.
 pub async fn get_localstack_dynamodb() -> &'static ContainerAsync<LocalStack> {
     LOCALSTACK_DYNAMODB
-        .get_or_init(|| async { spin_up_localstack_with_services(&["dynamodb"]).await })
+        .get_or_init(|| async {
+            let ls = spin_up_localstack_with_services(&["dynamodb"]).await;
+            init().await;
+            ls
+        })
         .await
+}
+
+pub async fn init() {
+    set_up_tables(get_dynamodb_client().await)
+        .await
+        .expect("shouldn't fail setting up tables");
 }
 
 /// Sets up all tables and populates them with test data.
 ///
 /// The test data resides in `../data/`.
 pub async fn setup(client: &Client) {
-    tear_down_tables(client)
-        .await
-        .expect("shouldn't fail tearing down existing tables");
-    set_up_tables(client)
-        .await
-        .expect("shouldn't fail setting up tables");
     populate_tables(client)
         .await
         .expect("shouldn't fail populating tables");
-}
-
-async fn tear_down_tables(client: &Client) -> Result<(), Error> {
-    let tables = client.list_tables().send().await?;
-    for table in tables.table_names.unwrap_or_default() {
-        client.delete_table().table_name(table).send().await?;
-    }
-
-    Ok(())
 }
 
 async fn set_up_tables(client: &Client) -> Result<(), Error> {
@@ -245,9 +240,6 @@ pub async fn reset(client: &Client) {
     depopulate_tables(client)
         .await
         .expect("shouldn't fail depopulating tables");
-    populate_tables(client)
-        .await
-        .expect("shouldn't fail populating tables");
 }
 
 async fn depopulate_tables(client: &Client) -> Result<(), Error> {

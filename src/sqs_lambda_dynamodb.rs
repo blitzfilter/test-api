@@ -42,17 +42,7 @@ pub async fn get_localstack_sqs_lambda_dynamodb() -> &'static ContainerAsync<Loc
     LOCALSTACK_SQS_LAMBDA_DYNAMODB
         .get_or_init(|| async {
             let ls = spin_up_localstack_with_services(&["sqs", "lambda", "dynamodb"]).await;
-            let lambda_client = get_lambda_client().await;
-            let sqs_client = get_sqs_client().await;
-            set_up_queues(sqs_client)
-                .await
-                .expect(&format!("shouldn't fail creating queue '{QUEUE_NAME}'"));
-            set_up_lambda(lambda_client)
-                .await
-                .expect(&format!("shouldn't fail setting up lambda '{LAMBDA_NAME}'"));
-            setup_sqs_lambda_config(sqs_client, lambda_client)
-                .await
-                .expect("shouldn't fail setting up sqs lambda config");
+            init().await;
             ls
         })
         .await
@@ -60,6 +50,21 @@ pub async fn get_localstack_sqs_lambda_dynamodb() -> &'static ContainerAsync<Loc
 
 pub const LAMBDA_NAME: &str = "item_write_lambda";
 const LAMBDA_BOOTSRAP_ZIP_PATH: &str = "/tmp/item_write_lambda_bootstrap.zip";
+
+pub async fn init() {
+    let lambda_client = get_lambda_client().await;
+    let sqs_client = get_sqs_client().await;
+    set_up_queues(sqs_client)
+        .await
+        .expect(&format!("shouldn't fail creating queue '{QUEUE_NAME}'"));
+    set_up_lambda(lambda_client)
+        .await
+        .expect(&format!("shouldn't fail setting up lambda '{LAMBDA_NAME}'"));
+    setup_sqs_lambda_config(sqs_client, lambda_client)
+        .await
+        .expect("shouldn't fail setting up sqs lambda config");
+    crate::dynamodb::init().await;
+}
 
 async fn set_up_lambda(client: &aws_sdk_lambda::Client) -> Result<(), Box<dyn std::error::Error>> {
     Command::new("wget")
