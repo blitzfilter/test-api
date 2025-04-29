@@ -6,6 +6,7 @@ use rand::distr::{Alphanumeric, SampleString};
 use rand::prelude::IteratorRandom;
 use rand::{Rng, random_bool, random_range};
 use std::time::Duration;
+use item_core::item_data::ItemData;
 use strum::IntoEnumIterator;
 use time::OffsetDateTime;
 use uuid::Uuid;
@@ -53,7 +54,7 @@ fn rand_opt<T>(p: f64, t: T) -> Option<T> {
 fn random_iso8601_timestamp() -> String {
     let now = OffsetDateTime::now_utc();
 
-    // Random offset: ±5 years in seconds
+    // Random offset: ±5 years in milliseconds
     let max_ms: i64 = 5 * 365 * 24 * 60 * 60 * 1000;
     let offset_secs = rand::rng().random_range(0..=max_ms);
 
@@ -63,13 +64,20 @@ fn random_iso8601_timestamp() -> String {
         .unwrap()
 }
 
+impl Generator for ItemData {
+    fn generate() -> Self {
+        ItemModel::generate().into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use item_core::item_data::ItemData;
     use crate::generator::Generator;
     use item_core::item_model::ItemModel;
 
     #[test]
-    fn should_generate_random_item() {
+    fn should_generate_random_item_model() {
         let item = ItemModel::generate();
 
         assert!(item.created.is_some());
@@ -77,5 +85,14 @@ mod tests {
         assert!(item.event_id.is_some());
         assert!(item.url.is_some());
         assert!(item.hash.is_some());
+    }
+
+    #[test]
+    fn should_generate_random_item_datum() {
+        let item = ItemData::generate();
+
+        assert!(item.created.is_some());
+        assert!(item.source_id.is_some());
+        assert!(item.url.is_some());
     }
 }
