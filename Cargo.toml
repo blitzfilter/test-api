@@ -7,7 +7,7 @@ edition = "2024"
 item-core = { git = "https://github.com/blitzfilter/item-core", branch = "main" }
 aws-config = { version = "1.6.2" }
 aws-sdk-lambda = { version = "1.76.0" }
-aws-sdk-dynamodb = { version = "1.72.0" }
+aws-sdk-dynamodb = { version = "1.72.1" }
 aws-sdk-sqs = { version = "1.65.0" }
 serde_dynamo = { version = "4.2.14", features = ["aws-sdk-dynamodb+1"] }
 serde_json = { version = "1.0.140" }
