@@ -3,7 +3,7 @@ use aws_sdk_dynamodb::Client;
 use aws_sdk_dynamodb::config::Credentials;
 use std::collections::HashMap;
 use std::process::Command;
-use testcontainers::core::IntoContainerPort;
+use testcontainers::core::{IntoContainerPort, Mount};
 use testcontainers::runners::AsyncRunner;
 use testcontainers::{ContainerAsync, ImageExt};
 use testcontainers_modules::localstack::LocalStack;
@@ -21,6 +21,7 @@ pub async fn spin_up_localstack(env_vars: HashMap<&str, &str>) -> ContainerAsync
                 .with_container_name(LOCALSTACK_CONTAINER_NAME),
             |ls, (k, v)| ls.with_env_var(*k, *v),
         )
+        .with_mount(Mount::bind_mount("/var/run/docker.sock", "/var/run/docker.sock"))
         .with_mapped_port(4566, 4566.tcp());
 
     request
