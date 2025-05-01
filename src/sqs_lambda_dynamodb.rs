@@ -1,9 +1,11 @@
 use crate::localstack::{get_lambda_client, get_sqs_client, spin_up_localstack_with_services};
+use aws_sdk_lambda::client::Waiters;
 use aws_sdk_lambda::types::Runtime;
 use aws_sdk_sqs::types::QueueAttributeName::QueueArn;
 use std::fs::File;
 use std::io::Read;
 use std::process::Command;
+use std::time::Duration;
 use testcontainers::ContainerAsync;
 use testcontainers_modules::localstack::LocalStack;
 use tokio::sync::OnceCell;
@@ -36,6 +38,12 @@ pub async fn init() {
     set_up_lambda(lambda_client)
         .await
         .expect(&format!("shouldn't fail setting up lambda '{LAMBDA_NAME}'"));
+    lambda_client
+        .wait_until_function_active_v2()
+        .function_name(LAMBDA_NAME)
+        .wait(Duration::from_secs(30))
+        .await
+        .expect("shouldn't fail waiting until lambda is active");
     setup_sqs_lambda_config(sqs_client, lambda_client)
         .await
         .expect("shouldn't fail setting up sqs lambda config");
