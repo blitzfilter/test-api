@@ -3,7 +3,7 @@ use item_core::item_model::ItemModel;
 use std::time::Duration;
 use test_api::generator::Generator;
 use test_api::localstack::{get_lambda_client, get_sqs_client};
-use test_api::sqs_lambda_dynamodb::{LAMBDA_NAME, QUEUE_URL};
+use test_api::sqs_lambda_dynamodb::{LAMBDA_NAME, WRITE_LAMBDA_QUEUE_URL};
 use test_api_macros::blitzfilter_data_ingestion_test;
 use tokio::time::sleep;
 
@@ -27,7 +27,7 @@ async fn should_insert_msg_in_q_then_trigger_lambda() {
     let sqs_client = get_sqs_client().await;
     sqs_client
         .send_message()
-        .queue_url(QUEUE_URL)
+        .queue_url(WRITE_LAMBDA_QUEUE_URL)
         .message_body(serde_json::to_string(&item).unwrap())
         .send()
         .await
@@ -39,7 +39,7 @@ async fn should_insert_msg_in_q_then_trigger_lambda() {
     // Check if queue is empty - someone else (Lambda) polled the event we previously sent
     let receive_res = sqs_client
         .receive_message()
-        .queue_url(QUEUE_URL)
+        .queue_url(WRITE_LAMBDA_QUEUE_URL)
         .send()
         .await;
     assert!(receive_res.is_ok());

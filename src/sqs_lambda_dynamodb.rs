@@ -1,7 +1,9 @@
 use crate::localstack::{get_lambda_client, get_sqs_client, spin_up_localstack_with_services};
 use aws_sdk_lambda::client::Waiters;
 use aws_sdk_lambda::types::Runtime;
+use aws_sdk_sqs::types::QueueAttributeName;
 use aws_sdk_sqs::types::QueueAttributeName::QueueArn;
+use serde_json::json;
 use std::fs::File;
 use std::io::Read;
 use std::process::Command;
@@ -32,9 +34,9 @@ const LAMBDA_BOOTSRAP_ZIP_PATH: &str = "/tmp/item_write_lambda_bootstrap.zip";
 pub async fn init() {
     let lambda_client = get_lambda_client().await;
     let sqs_client = get_sqs_client().await;
-    set_up_queues(sqs_client)
-        .await
-        .expect(&format!("shouldn't fail creating queue '{QUEUE_NAME}'"));
+    set_up_queues(sqs_client).await.expect(&format!(
+        "shouldn't fail creating queue '{WRITE_LAMBDA_QUEUE_NAME}'"
+    ));
     set_up_lambda(lambda_client)
         .await
         .expect(&format!("shouldn't fail setting up lambda '{LAMBDA_NAME}'"));
@@ -95,12 +97,12 @@ async fn setup_sqs_lambda_config(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let q_arn = sqs_client
         .get_queue_attributes()
-        .queue_url(QUEUE_URL)
+        .queue_url(WRITE_LAMBDA_QUEUE_URL)
         .attribute_names(QueueArn)
         .send()
         .await
         .expect(&format!(
-            "shouldn't fail retrieving ARN for queue '{QUEUE_NAME}' with url '{QUEUE_URL}'"
+            "shouldn't fail retrieving ARN for queue '{WRITE_LAMBDA_QUEUE_NAME}' with url '{WRITE_LAMBDA_QUEUE_URL}'"
         ))
         .attributes
         .expect("shouldn't fail getting queue attributes because we explicitly requested some")
@@ -123,9 +125,12 @@ async fn setup_sqs_lambda_config(
     Ok(())
 }
 
-pub const QUEUE_NAME: &str = "write_lambda_queue";
-pub const QUEUE_URL: &str =
+pub const WRITE_LAMBDA_QUEUE_NAME: &str = "write_lambda_queue";
+pub const WRITE_LAMBDA_QUEUE_URL: &str =
     "http://sqs.eu-central-1.localhost.localstack.cloud:4566/000000000000/write_lambda_queue";
+pub const WRITE_LAMBDA_QUEUE_DLQ_NAME: &str = "write_lambda_queue_dlq";
+pub const WRITE_LAMBDA_QUEUE_DLQ_URL: &str =
+    "http://sqs.eu-central-1.localhost.localstack.cloud:4566/000000000000/write_lambda_queue_dlq";
 
 pub async fn setup(dynamodb_client: &aws_sdk_dynamodb::Client) {
     crate::dynamodb::setup(dynamodb_client).await;
@@ -134,7 +139,34 @@ pub async fn setup(dynamodb_client: &aws_sdk_dynamodb::Client) {
 async fn set_up_queues(sqs_client: &aws_sdk_sqs::Client) -> Result<(), aws_sdk_sqs::Error> {
     sqs_client
         .create_queue()
-        .queue_name(QUEUE_NAME)
+        .queue_name(WRITE_LAMBDA_QUEUE_DLQ_NAME)
+        .send()
+        .await?;
+
+    let dlq_arn = sqs_client
+        .get_queue_attributes()
+        .queue_url(WRITE_LAMBDA_QUEUE_DLQ_URL)
+        .attribute_names(QueueArn)
+        .send()
+        .await
+        .expect(&format!(
+            "shouldn't fail retrieving ARN for queue '{WRITE_LAMBDA_QUEUE_DLQ_NAME}' with url '{WRITE_LAMBDA_QUEUE_DLQ_URL}'"
+        ))
+        .attributes
+        .expect("shouldn't fail getting queue attributes because we explicitly requested some")
+        .get(&QueueArn)
+        .expect(&format!(
+            "shouldn't fail getting queue attribute '{QueueArn}' because we explicitly requested it"
+        ))
+        .to_string();
+
+    sqs_client
+        .create_queue()
+        .queue_name(WRITE_LAMBDA_QUEUE_NAME)
+        .attributes(
+            QueueAttributeName::RedrivePolicy,
+            json!({"deadLetterTargetArn": dlq_arn, "maxReceiveCount": 5}).to_string(),
+        )
         .send()
         .await?;
     Ok(())
@@ -144,8 +176,10 @@ pub async fn reset(sqs_client: &aws_sdk_sqs::Client, dynamodb_client: &aws_sdk_d
     crate::dynamodb::reset(dynamodb_client).await;
     sqs_client
         .purge_queue()
-        .queue_url(QUEUE_URL)
+        .queue_url(WRITE_LAMBDA_QUEUE_URL)
         .send()
         .await
-        .expect(&format!("shouldn't fail purging queue '{QUEUE_NAME}'"));
+        .expect(&format!(
+            "shouldn't fail purging queue '{WRITE_LAMBDA_QUEUE_NAME}'"
+        ));
 }
