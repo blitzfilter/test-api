@@ -28,8 +28,8 @@ pub async fn get_localstack_sqs_lambda_dynamodb() -> &'static ContainerAsync<Loc
         .await
 }
 
-pub const LAMBDA_NAME: &str = "item_write_lambda";
-const LAMBDA_BOOTSRAP_ZIP_PATH: &str = "/tmp/item_write_lambda_bootstrap.zip";
+pub const LAMBDA_NAME: &str = "item-write-lambda";
+const LAMBDA_BOOTSRAP_ZIP_PATH: &str = "/tmp/item-write-lambda_bootstrap.zip";
 
 pub async fn init() {
     let lambda_client = get_lambda_client().await;
