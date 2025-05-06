@@ -9,9 +9,16 @@ use testcontainers::{ContainerAsync, ImageExt};
 use testcontainers_modules::localstack::LocalStack;
 use tokio::sync::OnceCell;
 
-const LOCALSTACK_CONTAINER_NAME: &str = "localstack-test-api";
+pub const LOCALSTACK_CONTAINER_NAME: &str = "localstack-test-api";
 
 pub async fn spin_up_localstack(env_vars: HashMap<&str, &str>) -> ContainerAsync<LocalStack> {
+    let _ = tracing_subscriber::fmt()
+        .json()
+        .with_max_level(tracing::Level::INFO)
+        .with_current_span(true)
+        .with_ansi(false)
+        .try_init();
+
     cleanup_existing_container(LOCALSTACK_CONTAINER_NAME);
     let request = env_vars
         .iter()
