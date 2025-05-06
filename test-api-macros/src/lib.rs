@@ -9,8 +9,8 @@ pub fn blitzfilter_dynamodb_test(_attr: TokenStream, item: TokenStream) -> Token
     let fn_block = &input.block;
 
     let result = quote! {
-        #[serial_test::serial]
         #[tokio::test]
+        #[test_api::serial_test::serial]
         async fn #fn_name() {
             let container = test_api::dynamodb::get_localstack_dynamodb().await;
             let client = test_api::localstack::get_dynamodb_client().await;
@@ -34,8 +34,8 @@ pub fn blitzfilter_data_ingestion_test(_attr: TokenStream, item: TokenStream) ->
     let fn_block = &input.block;
 
     let result = quote! {
-        #[serial_test::serial]
         #[tokio::test]
+        #[test_api::serial_test::serial]
         async fn #fn_name() {
             let container = test_api::sqs_lambda_dynamodb::get_localstack_sqs_lambda_dynamodb().await;
             let dynamodb_client = test_api::localstack::get_dynamodb_client().await;
